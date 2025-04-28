@@ -85,11 +85,13 @@ test_modules <- lapply(modules_interest$Module, function(module) {
 names(test_modules) <- modules_interest$Module
 
 ##extract KEGG##
-Kegg <- lapply(modules_interest$Module, function(module) {
+Kegg2 <- lapply(frain$Module, function(module) {
   test_modules[[module]]$KEGG_2019_Mouse  
   })
-names(Kegg) <- modules_interest$Module
-
+names(Kegg2) <- frain2$combined
+names(Kegg2) <- factor(names(Kegg2), levels = frain2$combined)
+mtc_matrix <- mtc_matrix[rownames(frain2),]
+table(names(Kegg) == rownames(frain2))
 ##bind KEGG##
 ###create sample column and name by module color###
 ##for loop worked!###
@@ -98,9 +100,51 @@ for(i in modules_interest$Module) {
 }
 Kegg[["darkslateblue"]]$Sample <- paste0("darkslateblue")  
 ###Binds all list items###
-Kegg_bound <- rbindlist(Kegg, fill = TRUE)
-Kegg_filtered <- filter(Kegg_bound, Adjusted.P.value <= 0.05)
+Kegg_bound2 <- rbindlist(Kegg2)
+Kegg_bound2$module <- rep(names(Kegg2), times = sapply(Kegg2, nrow))
+Kegg_bound2$module <- factor(Kegg_bound2$module, levels = frain2$combined)
+Kegg_filtered2 <- filter(Kegg_bound2, Adjusted.P.value <= 0.05)
 
+##extract KEGG##
+GOBP <- lapply(frain$Module, function(module) {
+  test_modules[[module]]$GO_Biological_Process_2023 
+})
+names(GOBP) <- frain2$combined
+names(GOBP) <- factor(names(GOBP), levels = frain2$combined)
+
+##bind KEGG##
+
+###Binds all list items###
+GOBP_bound <- rbindlist(GOBP)
+GOBP_bound$module <- rep(names(GOBP), times = sapply(GOBP, nrow))
+GOBP_bound$module <- factor(GOBP_bound$module, levels = frain2$combined)
+GOBP_filtered <- filter(GOBP_bound, Adjusted.P.value <= 0.05)
+
+"GO_Cellular_Component_2023",
+"GO_Molecular_Function_2023",
+"KEGG_2019_Mouse",
+"dbGaP",
+"Panther_2016",
+"Reactome_2022",
+"RNA-Seq_Disease_Gene_and_Drug_Signatures_from_GEO"
+
+GOBP <- lapply(frain$Module, function(module) {
+  test_modules[[module]]$"RNA-Seq_Disease_Gene_and_Drug_Signatures"
+})
+names(RNADGDS) <- frain2$combined
+names(RNADGDS) <- factor(names(RNADGDS), levels = frain2$combined)
+
+##bind KEGG##
+
+###Binds all list items###
+RNADGDS_bound <- rbindlist(RNADGDS)
+RNADGDS_bound$module <- rep(names(RNADGDS), times = sapply(RNADGDS, nrow))
+RNADGDS_bound$module <- factor(RNADGDS_bound$module, levels = frain2$combined)
+RNADGDS_filtered <- filter(RNADGDS_bound, Adjusted.P.value <= 0.05)
+
+signif_enrirchR <- list(GOBP_filtered, GOCC_filtered, GOMF_filtered, Kegg_filtered2, DGP_filtered, RNADGDS_filtered)
+names(signif_enrirchR) <- c("Supplementary_Table5 (GOBP)", "Supplementary_Table6 GOCC", "Supplementary_Table7 GOMF", "Supplementary_Table8 Kegg", "Supplementary_Table9 dbGaP", "Supplementary_Table10 RNA_GEO")
+write.xlsx(signif_enrirchR, "EnrichR_Significant.xlsx")
 ##extract KEGG##
 trial2 <- lapply(modules_interestrm, function(module) {
   test_modules_rw[[module]]$KEGG_2019_Mouse  
@@ -192,6 +236,7 @@ test_data2 <- Male_exps2[duplicated(Male_exps2$Term)| duplicated(Male_exps2$Term
 test_data2 <- test_data2[duplicated(test_data2$Term)| duplicated(test_data2$Term, fromLast=TRUE),]
 test_data2 <- filter(test_data2, Odds.Ratio > 4)
 test_data2 <- Kegg_bound[duplicated(Kegg_bound$Term)| duplicated(Kegg_bound$Term, fromLast=TRUE),] 
+test_data2 <- Kegg_filtered[duplicated(Kegg_filtered$Term)| duplicated(Kegg_filtered$Term, fromLast=TRUE),] 
 test_data2 <- filter(test_data2, Adjusted.P.value <= 0.05)
 ### clustering dot plots ###
 markers <- test_data2$Term %>% unique()
@@ -347,13 +392,21 @@ plot_spacer() + plot_spacer() + ggtree_plot_col +
   plot_layout(ncol = 3, widths = c(0.7, -0.1, 4), heights = c(0.9, 0.1, -0.1, 4, 1))
 ### plot data ### 
 
-g <- ggplot(Kegg_filtered, aes(x = Sample, y = Term, color = Adjusted.P.value, size = Odds.Ratio)) +
+g <- ggplot(Kegg_filtered2_100, aes(x = module, y = Term, color = Adjusted.P.value, size = Odds.Ratio)) +
+  geom_point() +
+  scale_color_gradient(low = "red", high = "blue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1), axis.text = element_text(face = "bold", color = "black")) +
+  ylab("") +
+  xlab("Modules") +
+  ggtitle("Significant Top 100 KEGG Terms")
+g <- ggplot(test_data2, aes(x = Sample, y = Term, color = Adjusted.P.value, size = Odds.Ratio)) +
   geom_point() +
   scale_color_gradient(low = "red", high = "blue") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1), axis.text = element_text(face = "bold", color = "black")) +
   ylab("") +
-  xlab("Non-Rhythmic Modules") +
+  xlab("Top 200 Overlapping Kegg Terms") +
   ggtitle("Significant KEGG Terms")
 g + coord_fixed(ratio = 0.15, expand = TRUE, clip = "on")
 g +  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1), axis.text = element_text(face = "bold", color = "black")) + scale_y_discrete(guide = guide_axis(n.dodge = 2))
@@ -374,7 +427,7 @@ kegg_nonrhythmic.order <- unique(as.character(kegg_nonrhythmic$Term)[order(kegg_
 kegg_rhythmic$Term <- factor(kegg_rhythmic$Term, levels = kegg_rhythmic.order)
 kegg_nonrhythmic$Term <- factor(kegg_nonrhythmic$Term, levels = kegg_nonrhythmic.order)
 ### reorder x-axis ###
-g2 <- ggplot(kegg_filtered2, aes(x = factor(Sample, level = c('cyan', 'saddlebrown', 'royalblue', 'skyblue', 'lightyellow', 'lightgreen', 'black', 'brown','darkorange', 'darkred', 'darkturquoise', 'green', 'lightcyan', 'magenta', 'purple', 'red', 'skyblue3', 'steelblue', 'turquoise', 'violet', 'yellow')), y = Term, color = Adjusted.P.value, size = Odds.Ratio)) +
+g2 <- ggplot(kegg_filtered, aes(x = factor(Sample, level = c('cyan', 'saddlebrown', 'royalblue', 'skyblue', 'lightyellow', 'lightgreen', 'black', 'brown','darkorange', 'darkred', 'darkturquoise', 'green', 'lightcyan', 'magenta', 'purple', 'red', 'skyblue3', 'steelblue', 'turquoise', 'violet', 'yellow')), y = Term, color = Adjusted.P.value, size = Odds.Ratio)) +
   geom_point() +
   scale_color_gradient(low = "red", high = "blue") +
   theme_bw() +

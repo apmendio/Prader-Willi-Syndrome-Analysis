@@ -559,7 +559,7 @@ dev.off()
 #moduleColors is testset
 #wtColors is the ref set
 wtColors = MM_female$Module
-moduleColors = MM_wt$Module
+moduleColors = MM_wtfemale$Module
 #wtMEs = orderMEs(MEs)
 #moduleColors = wtColors
 
@@ -570,7 +570,7 @@ moduleColors = MM_wt$Module
 #cmModuleLabels = substring(names(MEs_cm), 3)
 
 wtModules = substring(names(consensusMEs$wtfdata$data), 3)
-rwModules = substring(names(MEs_wt), 3)
+rwModules = substring(names(MEs_wtf), 3)
 #cfModules = cfModuleLabels
 #cmModules = cmModuleLabels
 #cfModules = substring(names(MEs_cf), 3)
@@ -603,7 +603,7 @@ pTable[pTable>50] = 50;
 wtModTotals=apply(CountTbl,1,sum) 
 rwModTotals=apply(CountTbl,2,sum) 
 #Actualplotting 
-sizeGrWindow(10,7); 
+sizeGrWindow(20,14); 
 #pdf(file="Plots/ConsensusVsFemaleModules.pdf",wi=10,he=7); 
 par(mfrow=c(1,1)); 
 par(cex=1.0); 
@@ -612,10 +612,10 @@ par(mar=c(8,10.4,2.7,1)+0.3);
 labeledHeatmap(Matrix=pTable, 
   xLabels=paste(" ", rwModules), 
   yLabels=paste(" ", wtModules), 
-  colorLabels = TRUE, xSymbols=paste("Consensus WT Females", rwModules, ":", rwModTotals, sep=""), 
-  ySymbols=paste("WT FM", wtModules, ":", wtModTotals, sep=""), 
+  colorLabels = TRUE, xSymbols=paste("Consensus WT Female", rwModules, ":", rwModTotals, sep=""), 
+  ySymbols=paste("Universal WT Female", wtModules, ":", wtModTotals, sep=""), 
   textMatrix=CountTbl, colors=greenWhiteRed(100)[50:100], 
-  main="CWTF vs WTFM Modules", 
+  main="Universal WTF vs Consensus WTF Modules", 
   cex.text=0.5, cex.lab=0.8, setStdMargins=FALSE); 
 dev.off();
 

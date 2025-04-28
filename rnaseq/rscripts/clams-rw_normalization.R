@@ -1,13 +1,16 @@
 ###2.20.24
+
+###4.2.24
+setwd("/Users/aron/Desktop/LaSalle_Lab/Analysis/clamsrw/rnaseq/consensus_analysis/version2")
 cf <- read.csv("cf.counts.csv")
 cm <- read.csv("cm.counts.csv")
 rf <- read.csv("rf.counts.csv")
 rm <- read.csv("rm.counts.csv")
-wtmf <- read.csv("wtfm.csv")
+#wtmf <- read.csv("wtfm.csv")
 wtf <- read.csv("wtf_non-normalized.csv")
 wtm <- read.csv("wtm_non-normalized.csv")
-wtf.1 <- read.csv("wt.fcounts.csv")
-wtm.1 <- read.csv("wt.mcounts.csv")
+#wtf.1 <- read.csv("wt.fcounts.csv")
+#wtm.1 <- read.csv("wt.mcounts.csv")
 ####
 
 rownames(cf) <- cf$Gene_ID
@@ -36,7 +39,7 @@ d <- d0[-drop,]
 dim(cf) # number of genes before cleanup
 dim(d) # number of genes left
 logcpm <- cpm(d, prior.count=2, log=TRUE)
-write.csv(logcpm,"cf_normalized.csv")
+#write.csv(logcpm,"cf_normalized.csv")
 cf_normalized <- logcpm
 
 d0 <- DGEList(cm)
@@ -46,7 +49,7 @@ d <- d0[-drop,]
 dim(cm) # number of genes before cleanup
 dim(d) # number of genes left
 logcpm <- cpm(d, prior.count=2, log=TRUE)
-write.csv(logcpm,"cm_normalized.csv")
+#write.csv(logcpm,"cm_normalized.csv")
 cm_normalized <- logcpm
 
 d0 <- DGEList(rf)
@@ -56,7 +59,7 @@ d <- d0[-drop,]
 dim(rf) # number of genes before cleanup
 dim(d) # number of genes left
 logcpm <- cpm(d, prior.count=2, log=TRUE)
-write.csv(logcpm,"rf_normalized.csv")
+#write.csv(logcpm,"rf_normalized.csv")
 rf_normalized <- logcpm
 
 d0 <- DGEList(rm)
@@ -66,7 +69,7 @@ d <- d0[-drop,]
 dim(rm) # number of genes before cleanup
 dim(d) # number of genes left
 logcpm <- cpm(d, prior.count=2, log=TRUE)
-write.csv(logcpm,"rm_normalized.csv")
+#write.csv(logcpm,"rm_normalized.csv")
 rm_normalized <- logcpm
 
 d0 <- DGEList(wtf)
@@ -76,7 +79,7 @@ d <- d0[-drop,]
 dim(wtf) # number of genes before cleanup
 dim(d) # number of genes left
 logcpm <- cpm(d, prior.count=2, log=TRUE)
-write.csv(logcpm,"wtf_normalized.csv")
+#write.csv(logcpm,"wtf_normalized.csv")
 wtf_normalized <- logcpm
 wtf_normalized <- wtf_normalized[, order(colnames(wtf_normalized))]
 
@@ -87,25 +90,49 @@ d <- d0[-drop,]
 dim(wtm) # number of genes before cleanup
 dim(d) # number of genes left
 logcpm <- cpm(d, prior.count=2, log=TRUE)
-write.csv(logcpm,"wtm_normalized.csv")
+#write.csv(logcpm,"wtm_normalized.csv")
 wtm_normalized <- logcpm
 wtm_normalized <- wtm_normalized[, order(colnames(wtm_normalized))]
 
 ###
-wtfwtm <- merge(wtf_normalized, wtm_normalized, by = "row.names")
-colnames(wtfwtm)[1] <- "Gene_ID"
-cfcm <- merge(cf_normalized, cm_normalized, by = "row.names")
-rfrm <- merge(rf_normalized, rm_normalized, by = "row.names")
-cfcmrfrmwtfm <- merge(wtfwtm, cfcmrfrm_normalized, by = "Gene_ID")
-cfcmrfrm_normalized <- merge(cfcm, rfrm, by = "Row.names")
-cfcmrfrmwtfm_normalized <- merge(wtmf, cfcmrfrm_normalized, by = "Row.names")
-All_merge <- merge(wtfwtm, cfcmrfrm_normalized, by = "Gene_ID")
+wtfwtm <- merge(wtf_normalized, wtm_normalized, by = "row.names", all = TRUE)
+#colnames(wtfwtm)[1] <- "Gene_ID"
+cfcm <- merge(cf_normalized, cm_normalized, by = "row.names", all = TRUE)
+rfrm <- merge(rf_normalized, rm_normalized, by = "row.names", all = TRUE)
+#cfcmrfrmwtfm <- merge(wtfwtm, cfcmrfrm_normalized, by = "Gene_ID", all = TRUE)
+cfcmrfrm_normalized <- merge(cfcm, rfrm, by = "Row.names", all = TRUE)
+#cfcmrfrmwtfm_normalized <- merge(wt, cfcmrfrm_normalized, by = "Row.names")
+All_merge <- merge(wtfwtm, cfcmrfrm_normalized, by = "Row.names", all = TRUE)
+dim(All_merge)
 dim(cfcmrfrmwtfm_normalized)
 write.csv(cfcmrfrmwtfm_normalized, "cfcmrfrmwtfm_normalized.csv")
+All_merge_test <- merge(All_merge, ens, by = "Row.names")
+
+###
+wtfwtm <- merge(wtf_normalized, wtm_normalized, by = "row.names")
+#colnames(wtfwtm)[1] <- "Gene_ID"
+cfcm <- merge(cf_normalized, cm_normalized, by = "row.names")
+rfrm <- merge(rf_normalized, rm_normalized, by = "row.names")
+#cfcmrfrmwtfm <- merge(wtfwtm, cfcmrfrm_normalized, by = "Gene_ID", all = TRUE)
+cfcmrfrm_normalized <- merge(cfcm, rfrm, by = "Row.names")
+#cfcmrfrmwtfm_normalized <- merge(wt, cfcmrfrm_normalized, by = "Row.names")
+All_merge2 <- merge(wtfwtm, cfcmrfrm_normalized, by = "Row.names")
+
+ens <- read.csv("ens_102.csv")
+dim(ens)
+All_merge <- merge(All_merge, ens, by = "Row.names")
+All_merge <- All_merge[!duplicated(All_merge$Gene.name),]
+rownames(All_merge) <- All_merge$Gene.name
+dim(ens3)
+dim(All_merge)
+dim(cfcmrfrmwtfm_normalized)
+write.csv(cfcmrfrmwtfm_normalized, "cfcmrfrmwtfm_normalized.csv")
+write.csv(All_merge, "All_merge_new.csv")
 
 ### separate out data
-rownames(All_merge) <- All_merge$Gene_ID
-All_merge <- All_merge[,-c(1)]
+rownames(All_merge) <- All_merge$Row.names
+rownames(All_merge) <- All_merge$Gene.name
+All_merge <- All_merge[,-c(1, 221, 222, 223, 224, 225)]
 head(All_merge)
 wtf_norm <- All_merge[,c(1:46)]
 wtm_norm <- All_merge[,c(47:92)]
@@ -115,6 +142,18 @@ rf_norm <- All_merge[,c(156:187)]
 rm_norm <- All_merge[,c(188:217)]
 colnames(rm_norm)
 
+All_merge <- All_merge[,-c(1)]
+All_merge <- read.csv("All_merge_new.csv")
+head(All_merge)
+dim(All_merge)
+wtf_norm <- All_merge[,c(1:46)]
+wtm_norm <- All_merge[,c(47:92)]
+cf_norm <- All_merge[,c(93:124)]
+cm_norm <- All_merge[,c(125:155)]
+rf_norm <- All_merge[,c(156:187)]
+rm_norm <- All_merge[,c(188:219)]
+#rm_norm <- rm_norm[,-c(4,9)]
+#colnames(rm_norm)
 ### Merge Traits
 CLAMS_alltraits <- read.csv("CLAMS_alltraits.csv")
 RER_traits <- read.csv("CLAMS 12-11 LD-DD combined traits.csv")

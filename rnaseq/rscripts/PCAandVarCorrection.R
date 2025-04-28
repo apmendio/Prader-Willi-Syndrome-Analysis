@@ -8,30 +8,35 @@ df2 <- iris
 head(df2)
 
 head(All_merge)
+rownames(All_merge) <- All_merge$Row.names
+All_merge <- All_merge[,-c(1)]
 df <- as.data.frame(t(All_merge))
 pca_res <- prcomp(All_merge, scale. = TRUE)
 autoplot(pca_res)
 df <- All_merge[,c(1:46, 93:124, 156:187)]
-df <- All_merge[,-c(159)]
-
+df <- All_merge[,-c(151, 159)]
+df <- All_merge3
 head(df)
-pca_res <- prcomp(df, scale. = TRUE)
+pca_res <- prcomp(t(df), scale. = TRUE)
 autoplot(pca_res)
 
 metadata <- read.csv("metadata_exp.csv")
 metadata <- read.csv("metadata_exp2.csv")
-metadata <- metadata[-c(151),]
+metadata <- metadata[-c(151,159),]
 pca_res <- prcomp(t(df), scale. = TRUE)
 autoplot(pca_res, data = metadata, colour = 'Batch')
 autoplot(pca_res, data = metadata, colour = 'Experiment')
+autoplot(pca_res, data = metadata, colour = 'Experiment', label = TRUE, label.size = 5)
 autoplot(pca_res, data = metadata, colour = 'Sex')
 dim(All_merge)
 dim(metadata)
-resids2 <- t(apply(df, 1, function(x)resid(lm(x ~ Experiment, data = metadata))))
-colnames(resids2) <- colnames(df)
-resids2 <- resids2[,-c(151)]
+## Blythe provided code to produce residuals ##
+resids2 <- t(apply(t(df), 1, function(x)resid(lm(x ~ Experiment, data = metadata)))) # normalized counts goes into df
+colnames(resids2) <- colnames(t(df))
+resids2 <- resids2[,-c(151,159)]
 pca_res2 <- prcomp(t(resids2), scale. = TRUE)
 autoplot(pca_res2, data = metadata, colour = 'Experiment')
+autoplot(pca_res2, data = metadata, colour = 'Experiment', label = TRUE, label.size = 5)
 autoplot(pca_res2, data = metadata, colour = 'Genotype')
 autoplot(pca_res2, data = metadata, colour = 'Batch')
 resids <- t(apply(resids, 1, function(x)resid(lm(x ~ Experiment, data = metadata))))
@@ -43,13 +48,13 @@ autoplot(pca_res3, data = metadata, colour = 'Genotype')
 ### separate out data
 head(resids2)
 dim(resids2)
-wtf_norm <- resids[,c(1:46)]
-wtm_norm <- resids[,c(47:92)]
-cf_norm <- resids[,c(93:124)]
-cm_norm <- resids[,c(125:154)]
-rf_norm <- resids[,c(155:186)]
-rm_norm <- resids[,c(187:215)]
-colnames(rm_norm)
+wtf_norm <- resids2[,c(1:46)]
+wtm_norm <- resids2[,c(47:92)]
+cf_norm <- resids2[,c(93:124)]
+cm_norm <- resids2[,c(125:154)]
+rf_norm <- resids2[,c(155:185)]
+rm_norm <- resids2[,c(186:217)]
+colnames(rf_norm)
 
 ###
 BiocManager::install("bladderbatch")

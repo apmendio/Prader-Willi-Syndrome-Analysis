@@ -219,9 +219,9 @@ metadata
 
 #Derive experiment metadata from the sample names
 #sample_names <- colnames(counts)
-#metadata <- read.table("sample_info.txt", header=T, sep="\t")
-#colnames(metadata) <- c("SampleID", "Treatment", "Cell")
-#metadata
+metadata <- read.table("sample_info.txt", header=T, sep="\t")
+colnames(metadata) <- c("SampleID", "Treatment", "Cell")
+metadata
 
 #CF
 #Create new variable grouping combining group of timepoints
@@ -557,20 +557,25 @@ library(ggrepel)
 EnhancedVolcano(top.table, lab = top.table$Gene, x = 'logFC', y = 'adj.P.Val')
 
 #Heatmap
-genes_of_interest <- read.csv("genes_of_interest.csv")
+logcpm <- read.csv("luhmes_counts.csv")
+rownames(logcpm) <- logcpm$gene
+genes_of_interest <- read.csv("genes_of_interest2.csv")
 rownames(genes_of_interest) <- genes_of_interest$Gene
 gene_list <- genes_of_interest$Gene
-i <- which(logcpm$genes %in% gene_list)
+i <- which(logcpm$gene %in% gene_list)
 mycol <- colorpanel(1000,"blue","white","red")
 heatmap.2(i, scale="row",
           labRow=i, labCol=metadata$group, 
           col=mycol, trace="none", density.info="none", 
           margin=c(8,6), lhei=c(2,10), dendrogram="column")
 
-logcpm <- logcpm[-c(7)]
+logcpm <- logcpm[-c(1)]
 
 heatmap.2(as.matrix(logcpm[rownames(genes_of_interest),]), col=mycol, scale="row", trace="none", density.info="none", 
-          margin=c(12,10), lhei=c(2,10), dendrogram="column")
+          margin=c(12,10), lhei=c(2,10), dendrogram="both")
+scaled_2 <- scale(as.matrix(logcpm[rownames(genes_of_interest),]), center = FALSE, scale = apply(as.matrix(logcpm[rownames(genes_of_interest),]), 2, sd, na.rm = TRUE))
+heatmap.2(scaled_logcpm, col=mycol, scale="none", trace="none", density.info="none", 
+          margin=c(12,10), lhei=c(2,10), dendrogram="both")
 
 top100 <- head(top.table, 100)
 top

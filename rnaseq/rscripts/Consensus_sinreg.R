@@ -20,30 +20,34 @@ setwd("/Users/aron/Desktop/LaSalle_Lab/Analysis/individualWGCNA/optimization_fol
 
 MEnames = colnames(MEs_cm)
 MEnames = colnames(MEs_wt)
+MEnames = colnames(wtMEs)
+MEnames = colnames(MEs_female)
 MEnames = colnames(consensusMEs$wtfdata$data)
 MEnames = colnames(consensusMEs$wtmdata$data)
 no.MEs = length(MEnames)
 
 traits = as.data.frame(pheno$wt$data)
 traits = as.data.frame(pheno$cm$data)
-traits = as.data.frame(pheno$wtf$data)
-traits = as.data.frame(pheno$wtm$data)
-
+traits = as.data.frame(pheno2$wtf$data)
+traits = as.data.frame(pheno2$wtm$data)
+traits = as.data.frame(cov_wt)
 #row.names(traits) <- traits$sampleID
 row.names(traits)
+row.names(wtMEs)
 #row.names(MEs_cm)
 row.names(consensusMEs$wtfdata$data)
 alldata = merge(traits, MEs_cm, by="row.names")
 alldata = merge(traits, MEs_wt, by="row.names")
 alldata = merge(traits, consensusMEs$wtfdata$data, by="row.names")
 alldata = merge(traits, consensusMEs$wtmdata$data, by="row.names")
+alldata = merge(traits, wtMEs, by="row.names")
 
 alldata = alldata[
   with(alldata, order(alldata$Timepoint)),
 ]
 
 head(alldata)
-#write.csv(alldata, "cm_eigenvalue.csv")
+write.csv(alldata, "wtm_eigenvalue_update.csv")
 
 fitlist = as.list(1:no.MEs)
 names(fitlist) <- MEnames
@@ -71,6 +75,8 @@ colnames(amplitude) = "amplitude"
 plotpoints = data.frame(matrix(ncol=no.MEs, nrow=nrow(alldata)))
 rownames(plotpoints) = alldata$Row.names
 colnames(plotpoints) = MEnames
+
+#setwd("/Users/aron/Desktop/LaSalle_Lab/Analysis/clamsrw/rnaseq/consensus_analysis/version2/wt/universalWT")
 
 for(i in MEnames){
   
@@ -107,7 +113,7 @@ for(i in MEnames) {
     xlab("Zeitgeber Time (ZT)") +
     theme_classic() +
     theme(legend.position="none")
-  ggsave(paste("Sine_regression_plots_", i, "_WTM.pdf"))
+  ggsave(paste("Sine_regression_plots_", i, "_WTM_update.pdf"))
 }
 
 # order results by best fit (highest R2 value) and save results #
@@ -117,11 +123,11 @@ results.ordered = results[
 
 results.ordered$Module = rownames(results.ordered)
 
-openxlsx::write.xlsx(results.ordered, file="Sine_regresion_results_WTM.xlsx")
+openxlsx::write.xlsx(results.ordered, file="Sine_regresion_results_WTM_update.xlsx")
 
 # Checking if hub genes within modules cycle in a similar manner to EigenValues #
 
-exp_wtdata.1 = as.data.frame(t(wtf_norm))
+exp_wtdata.1 = as.data.frame(t(wtm_norm))
 #colnames(exp_wtdata.1) = wtf$Gene_ID
 rownames(exp_wtdata.1)
 rownames(traits)
@@ -147,7 +153,7 @@ exp_wtdata.2 = exp_wtdata.2[
 #test <- WtME[match(rain.order$Module, rownames(WtME)),]
 
 hubSymbols = AnnotationDbi::mapIds(org.Mm.eg.db,
-                                   keys = hubProbes_male,
+                                   keys = test,
                                    column = "SYMBOL",
                                    keytype = 'ENSEMBL') 
 
@@ -162,12 +168,32 @@ for(i in hubProbes_female) {
     geom_point() +
     geom_line(data=plotpoints, aes(x=Timepoint, y=y2, color="red")) +
     scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15, 18, 21)) +
-    ggtitle(paste(names(hubProbes_female[which(hubProbes_female==i)]), "module hub gene: ", hubSymbols[which(hubProbes_female == i)])) +
+    ggtitle(paste(names(hubProbes_female[which(hubProbes_female==i)]), "module hub gene: ", hubProbes_female[which(hubProbes_female == i)])) +
     ylab("Expression") +
     xlab("Zeitgeber Time (ZT)") +
     theme_classic() +
     theme(legend.position="none")
-  ggsave(paste("Sine_regression_plot_", hubSymbols[which(hubProbes_female == i)], "_ME", names(hubProbes_female[which(hubProbes_female==i)]), "_WTF.pdf", sep=""))
+  ggsave(paste("Sine_regression_plot_", hubProbes_female[which(hubProbes_female == i)], "_ME", names(hubProbes_female[which(hubProbes_female==i)]), "_WTF_min30test.pdf", sep=""))
+  
+}
+
+for(i in hubProbes_wtfemale) {
+  y = exp_wtdata.2[,i]
+  sinreg_hub = sinreg(exp_wtdata.2$Timepoint, y, plot=FALSE)
+  
+  y1 = exp_wtdata.2[,i]
+  y2 = sinreg_hub[[2]]
+  
+  ggplot(data=exp_wtdata.2, aes(x=Timepoint, y=y1)) +
+    geom_point() +
+    geom_line(data=plotpoints, aes(x=Timepoint, y=y2, color="red")) +
+    scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15, 18, 21)) +
+    ggtitle(paste(names(hubProbes_wtfemale[which(hubProbes_wtfemale==i)]), "module hub gene: ", hubSymbols[which(hubProbes_wtfemale == i)])) +
+    ylab("Expression") +
+    xlab("Zeitgeber Time (ZT)") +
+    theme_classic() +
+    theme(legend.position="none")
+  ggsave(paste("Sine_regression_plot_", hubSymbols[which(hubProbes_wtfemale == i)], "_ME", names(hubProbes_female[which(hubProbes_wtfemale==i)]), "_WTF_test.pdf", sep=""))
   
 }
 
@@ -192,7 +218,27 @@ for(i in hubProbes_male) {
     xlab("Zeitgeber Time (ZT)") +
     theme_classic() +
     theme(legend.position="none")
-  ggsave(paste("Sine_regression_plot_", hubSymbols[which(hubProbes_male == i)], "_ME", names(hubProbes_male[which(hubProbes_male==i)]), "_WTM.pdf", sep=""))
+  ggsave(paste("Sine_regression_plot_", hubSymbols[which(hubProbes_male == i)], "_ME", names(hubProbes_male[which(hubProbes_male==i)]), "_WTM_min30.pdf", sep=""))
+  
+}
+
+for(i in hubProbes_wtfemale) {
+  y = exp_wtdata.2[,i]
+  sinreg_hub = sinreg(exp_wtdata.2$Timepoint, y, plot=FALSE)
+  
+  y1 = exp_wtdata.2[,i]
+  y2 = sinreg_hub[[2]]
+  
+  ggplot(data=exp_wtdata.2, aes(x=Timepoint, y=y1)) +
+    geom_point() +
+    geom_line(data=plotpoints, aes(x=Timepoint, y=y2, color="red")) +
+    scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15, 18, 21)) +
+    ggtitle(paste(names(hubProbes_wtfemale[which(hubProbes_wtfemale==i)]), "module hub gene: ", hubSymbols[which(hubProbes_wtfemale == i)])) +
+    ylab("Expression") +
+    xlab("Zeitgeber Time (ZT)") +
+    theme_classic() +
+    theme(legend.position="none")
+  ggsave(paste("Sine_regression_plot_", hubSymbols[which(hubProbes_wtfemale == i)], "_ME", names(hubProbes_female[which(hubProbes_wtfemale==i)]), "_WTF_test.pdf", sep=""))
   
 }
 #### Heatmaps of R2 with FDRs for associations between Modules and Time using sinreg() ####
@@ -208,7 +254,7 @@ colnames(R2) = "R2"
 
 textMatrix = paste(ifelse((signif(FDRs, 1))<0.05, "*", ""), sep="")
 
-tiff("Heatmap_WTM.tiff", res=400, height=7, width=2.5, units="in")
+tiff("Heatmap_WTM_universal_update.tiff", res=400, height=7, width=2.5, units="in")
 map1 = labeledHeatmap(Matrix = pVal,
                       xLabels = colnames(pVal),
                       yLabels = gsub("ME", "", rownames(pVal)),
@@ -221,28 +267,32 @@ map1 = labeledHeatmap(Matrix = pVal,
                       cex.text = 1,
                       cex.lab.x = 0.75,
                       cex.lab.y = 0.65,
-                      main=paste("SinReg Rhythmic WT Modules"))
+                      main=paste("SinReg Rhythmic WTM Modules"))
 dev.off()
 
 
-save(results.ordered, FDRs, pVal, plotpoints, file=glue::glue("sinreg_association_with_gene_modules_WTF.RData"))
+save(results.ordered, FDRs, pVal, plotpoints, file=glue::glue("sinreg_association_with_gene_modules_WTM_universal.RData"))
 rownames(multiExpr$wtdata$data)
 rownames(MEs_wt)
 #rain
-rain_output <- rain(consensusMEs$wtmdata$data, deltat=3, period=24, measure.sequence = c(6, 6, 6, 6, 6, 6, 5, 5), peak.border=c(0.3, 0.7), verbose=FALSE)
+rain_output <- rain(consensusMEs$wtfdata$data, deltat=3, period=24, measure.sequence = c(6, 6, 6, 6, 6, 6, 5, 5), peak.border=c(0.3, 0.7), verbose=FALSE)
+rain_output <- rain(wtMEs, deltat=12, period=24, measure.sequence = c(8, 8, 8, 8), peak.border=c(0.3, 0.7), verbose=FALSE)
 #rain_output <- rain(multiExpr$wtdata$data, deltat=3, period=24, measure.sequence = c(12, 12, 12, 12, 12, 12, 10, 10), peak.border=c(0.3, 0.7), verbose=FALSE)
 
 rain_output$FDR = p.adjust(rain_output$pVal, method="fdr")
 
-mrain.ordered = rain_output[
+frain.ordered = rain_output[
   with(rain_output, order(rain_output$pVal, decreasing=FALSE)),
 ]
-rownames(mrain.ordered) <- gsub(pattern = "ME", replacement = "", x = rownames(mrain.ordered), fixed = TRUE)
-mrain.ordered$Module = rownames(mrain.ordered)
-mrain.ordered$ensemblid = rownames(mrain.ordered)
 
+rownames(frain.ordered) <- gsub(pattern = "ME", replacement = "", x = rownames(frain.ordered), fixed = TRUE)
+frain.ordered$Module = rownames(frain.ordered)
+frain.ordered$ensemblid = rownames(frain.ordered)
+frain.ordered <- frain.ordered[order(frain.ordered$FDR, decreasing = FALSE),]
+t <- frain.ordered[order(frain.ordered$phase, decreasing = FALSE),]
+t <- t[order(t$Significance, decreasing = TRUE),]
 ensembl <- useMart(biomart = "ensembl", dataset = "mmusculus_gene_ensembl")
-wt_fm_genes_rain <- lapply(rownames(mrain.ordered), function(x){
+wt_f_genes_rain <- lapply(rownames(mrain.ordered), function(x){
   getBM(attributes = "external_gene_name", filters = "ensembl_gene_id", values = x, mart = ensembl, 
         verbose = TRUE) %>% unlist %>% as.character %>% unique %>% sort %>% paste(collapse = ", ")}) %>% unlist
 head(wt_fm_genes_rain)
@@ -255,7 +305,15 @@ rownames(Wt_counts)
 Wt_counts$ensemblid <- rownames(Wt_counts)
 Wt_counts$gene_name <- wt_fm_genes_rain
 
-write.csv(mrain.ordered, "rain_regresion_results_WTM_genes.csv")
+###organize the significance and phase
+
+mrain.ordered <- mrain.ordered[order(mrain.ordered$phase, decreasing = FALSE),]
+mrain.ordered <- mrain.ordered[order(mrain.ordered$Significance, decreasing = TRUE),]
+mrain.ordered
+frain.ordered <- frain.ordered[order(frain.ordered$phase, decreasing = FALSE),]
+frain.ordered <- frain.ordered[order(frain.ordered$Significance, decreasing = TRUE),]
+frain.ordered
+write.csv(frain.ordered, "rain_regresion_results_WTF_universal_genes_update.csv")
 openxlsx::write.xlsx(mrain.ordered, file="rain_regresion_results_WTF_genes.xlsx")
 openxlsx::write.xlsx(Wt_counts, file="Wtfm_genenames_counts.xlsx")
 
@@ -270,7 +328,7 @@ colnames(pVal) = "pVal"
 
 textMatrix = paste(ifelse((signif(FDRs, 1))<0.05, "*", ""), sep="")
 
-tiff("Heatmap_WTM_Rain.tiff", res=400, height=7, width=2.5, units="in")
+tiff("Heatmap_WTM_universal_Rain.tiff", res=400, height=7, width=2.5, units="in")
 map1 = labeledHeatmap(Matrix = pVal,
                       xLabels = colnames(pVal),
                       yLabels = gsub("ME", "", rownames(pVal)),
@@ -607,4 +665,61 @@ fMEs <- orderMEs(fMEs)
 
 rm(moduleMembership2)
 
+###TRIAL
 
+traits = as.data.frame(pheno$wtf$data)
+traits = as.data.frame(pheno$wtm$data)
+
+
+exp_wtdata.1 = as.data.frame(t(wtf_norm))
+#colnames(exp_wtdata.1) = wtf$Gene_ID
+rownames(exp_wtdata.1)
+rownames(traits)
+exp_wtdata.2 = merge(traits, exp_wtdata.1, by="row.names")
+
+exp_wtdata.2 = exp_wtdata.2[
+  with(exp_wtdata.2, order(exp_wtdata.2$Timepoint)),
+]
+
+genes_interest = c("Arntl", "Clock", "Cry1", "Cry2", "Per1","Per2","Per3", "Meg3", "Snhg14", "Xist", "Snrpn", "Cdkl5")
+genes_interest = c("Mecp2")
+#genes_interest = "Arntl"
+for(i in genes_interest) {
+  y.0 = exp_wtdata.2[,i]
+  sinreg_interest = sinreg(exp_wtdata.2$Timepoint, y.0, plot=FALSE)
+  #print(mean(exp_maledata.2$ENSMUSG00000028957))
+  y.1 = exp_wtdata.2[,i]
+  #y.2 = sinreg_interest[[2]]
+  
+  ggplot(data=exp_wtdata.2, aes(x=Timepoint, y=y.1)) +
+    geom_point() +
+    #geom_line(aes(x=exp_maledata.2$Timepoint, y=y.2, color="red")) +
+    geom_smooth(method="loess") +
+    scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15, 18, 21)) +
+    ggtitle(paste("Wild-Type Female", "Gene: ", genes_interest[which(genes_interest == i)], "|", "Module: ", MM_female$Module[which(MM_female$Probe == i)])) +
+    ylab("Expression (logcpm)") +
+    xlab("Zeitgeber Time (ZT)") +
+    theme_classic() +
+    theme(legend.position="none", plot.title = element_text(size = 20))
+  ggsave(paste("loess_plot_", genes_interest[which(genes_interest == i)], "_WTF_test2.pdf", sep=""))
+  
+}
+test_wtf <- t(wtf_norm)
+test_wtf <- as.data.frame(t(wtf_norm))
+
+gpt <- ggplot(test_wtf, aes(x=rownames(test_wtf), y = Xist)) +
+  geom_point() +
+  #geom_line(aes(x=exp_maledata.2$Timepoint, y=y.2, color="red")) +
+  geom_smooth(method="loess") 
+gpt
+
+ggplot(data=exp_wtdata.2, aes(x=Timepoint, y=Mecp2)) +
+  geom_point() +
+  #geom_line(aes(x=exp_maledata.2$Timepoint, y=y.2, color="red")) +
+  geom_smooth(method="loess") +
+  scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15, 18, 21)) +
+  #ggtitle(paste("gene: ", genes_interest[which(genes_interest)])) +
+  ylab("Expression") +
+  xlab("Zeitgeber Time (ZT)") +
+  theme_classic() +
+  theme(legend.position="none")

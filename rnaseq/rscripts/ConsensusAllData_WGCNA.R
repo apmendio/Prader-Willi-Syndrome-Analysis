@@ -45,7 +45,7 @@ Sys.setenv(R_THREADS = 1)
 enableWGCNAThreads()
 allowWGCNAThreads()
 
- # Read in normalized counts #
+# Read in normalized counts #
 
 exp_femdata <- read.csv("baboon_allgenes_counts.csv")
 exp_femdata2 <- read.csv("baboon_allgenes_counts2.csv")
@@ -219,7 +219,26 @@ multiExpr <- list(wtfdata = list(data = as.data.frame(t(wtf_norm))),
                   cmdata = list(data = as.data.frame(t(cm_norm))),
                   rfdata = list(data = as.data.frame(t(rf_norm))),
                   rmdata = list(data = as.data.frame(t(rm_norm))))
+
+multiExpr <- list(wtfdata = list(data = as.data.frame(t(wtf_norm))),
+                  wtmdata = list(data = as.data.frame(t(wtm_norm))))
+
+#Use power 17
+setwd("/Users/aron/Desktop/LaSalle_Lab/Analysis/clamsrw/rnaseq/consensus_analysis/version2/clams")
+setwd("/Users/aron/Desktop/LaSalle_Lab/Analysis/clamsrw/rnaseq/consensus_analysis/version2/rw")
+setwd("/Users/aron/Desktop/LaSalle_Lab/Analysis/clamsrw/rnaseq/consensus_analysis/version2/wt")
+setwd("/Users/aron/Desktop/LaSalle_Lab/Analysis/clamsrw/rnaseq/consensus_analysis/version2")
+multiExpr <- list(cfdata = list(data = as.data.frame(t(cf_norm))),
+                  cmdata = list(data = as.data.frame(t(cm_norm))))
+#Use power 11
+multiExpr <- list(rfdata = list(data = as.data.frame(t(rf_norm))),
+                  rmdata = list(data = as.data.frame(t(rm_norm))))
+#Use power 15
+multiExpr <- list(wtfdata = list(data = as.data.frame(t(wtf_norm))),
+                  wtmdata = list(data = as.data.frame(t(wtm_norm))))
+#Use power 17
 checkSets(multiExpr)
+
 exp <- list(cfdata = list(data = as.data.frame(t(cf_norm))),
                   cmdata = list(data = as.data.frame(t(cm_norm))))
 
@@ -228,19 +247,37 @@ exp2 <- list(rfdata = list(data = as.data.frame(t(rf_norm))),
 
 # Run WGCNA analysis #
 
-consensusMods <- blockwiseConsensusModules(multiExpr, checkMissingData = FALSE, maxBlockSize = 14000, corType = "bicor",
-                                           maxPOutliers = 0.1, power = 17, networkType = "signed", 
+consensusMods <- blockwiseConsensusModules(multiExpr, checkMissingData = TRUE, impute = TRUE, maxBlockSize = 16000, corType = "bicor",
+                                           maxPOutliers = 0.1, power = 16, networkType = "signed", 
                                            checkPower = FALSE, TOMType = "signed", 
-                                           networkCalibration = "full quantile", saveConsensusTOMs = TRUE,
+                                           networkCalibration = "full quantile", 
+                                           saveIndividualTOMs = TRUE, individualTOMFileNames = "individualTOM-%N-Set%s-Block%b.Rdata",
+                                           saveConsensusTOMs = TRUE, consensusTOMFilePattern = "consensusTOM-block.%b.RData",
+                                           deepSplit = 4, mergeCutHeight = 0.1, verbose = 5)
+
+consensusMods <- blockwiseConsensusModules(multiExpr, checkMissingData = TRUE, impute = TRUE, maxBlockSize = 16000, corType = "bicor",
+                                           maxPOutliers = 0.1, power = 16, networkType = "signed", 
+                                           checkPower = FALSE, TOMType = "signed", 
+                                           networkCalibration = "full quantile", 
+                                           saveIndividualTOMs = TRUE, individualTOMFileNames = {
+                                             printFlush(paste0("Saving individual TOM to: ", individualTOMFileNames))
+                                             "individualTOM-%N-Set%s-Block%b.Rdata"
+                                           },
+                                           saveConsensusTOMs = TRUE, consensusTOMFilePattern = "consensusTOM-block.%b.RData",
                                            deepSplit = 4, mergeCutHeight = 0.1, verbose = 5)
 table(consensusMods$colors) %>% sort(decreasing = TRUE)
 module.dist <- as.data.frame(table(consensusMods$colors) %>% sort(decreasing = TRUE))
 colnames(module.dist) <- c("Module", "Genes")
-write.csv(module.dist,"module.distribution_consensus_signedEXPCOR.csv")
+write.csv(module.dist,"module.distribution_consensus_signedCorrected.csv")
+write.csv(module.dist,"module.distribution_consensus_signedWTmin30.csv")
 
+#consensusTOMs <- consensusTOM(multiExpr, checkMissingData = TRUE, , maxBlockSize = 16000, corType = "bicor",
+                              maxPOutliers = 0.1, power = 16, networkType = "signed", 
+                              checkPower = FALSE, TOMType = "signed", 
+                              networkCalibration = "full quantile", saveConsensusTOMs = TRUE, verbose = 5)
 # Plot Merged Gene Dendrogram with Modules make sure to rename files #
 
-pdf("consensus_wgcna.pdf", width = 10, height = 5)
+pdf("consensus_wgcna_universal.pdf", width = 10, height = 5)
 sizeGrWindow(10, 5)
 plotDendroAndColors(dendro = consensusMods$dendrograms[[1]], colors = consensusMods$colors, 
                     groupLabels = "Modules", dendroLabels = FALSE, hang = 0.03, addGuide = TRUE, 
@@ -248,9 +285,9 @@ plotDendroAndColors(dendro = consensusMods$dendrograms[[1]], colors = consensusM
 dev.off()
 
 # Cluster Modules by FEMALE Eigengenes and Plot Dendrogram
-METree <- (1 - bicor(consensusMods$multiMEs$cfdata$data, maxPOutliers = 0.1)) %>% as.dist %>% 
+METree <- (1 - bicor(consensusMods$multiMEs$rfdata$data, maxPOutliers = 0.1)) %>% as.dist %>% 
   hclust(method = "average")
-pdf("CLAMS FEMALE Module Eigengene Dendrogramnu.pdf", height = 5, width = 10)
+pdf("CLAMS FEMALE RW Module Eigengene Dendrogramnuni.pdf", height = 5, width = 10)
 sizeGrWindow(height = 5, width = 10)
 par(mar = c(0, 5, 1, 1))
 plot(METree, main = "", xlab = "", sub = "", ylim = c(0, 1), cex = 0.6)
@@ -258,9 +295,9 @@ abline(h = 0.1, col = "red")
 dev.off()
 
 # Cluster Modules by MALE Eigengenes and Plot Dendrogram
-METree <- (1 - bicor(consensusMods$multiMEs$cmdata$data, maxPOutliers = 0.1)) %>% as.dist %>% 
+METree <- (1 - bicor(consensusMods$multiMEs$rmdata$data, maxPOutliers = 0.1)) %>% as.dist %>% 
   hclust(method = "average")
-pdf("CLAMS MALE Module Eigengene Dendrogramnu.pdf", height = 5, width = 10)
+pdf("CLAMS MALE RW Module Eigengene Dendrogramnuni.pdf", height = 5, width = 10)
 sizeGrWindow(height = 5, width = 10)
 par(mar = c(0, 5, 1, 1))
 plot(METree, main = "", xlab = "", sub = "", ylim = c(0, 1), cex = 0.6)
@@ -270,14 +307,31 @@ rm(METree)
 
 # Compare Eigengene Networks Between FEMALE and MALE
 consensusMEs <- consensusOrderMEs(consensusMods$multiMEs)
-pdf(file = "Consensus WGCNA Eigengene Networks ExpCor.pdf", width = 32, height = 32)
+pdf(file = "Consensus WGCNA Eigengene Networks Corrected.pdf", width = 32, height = 32)
 sizeGrWindow(width = 32, height = 32)
 par(cex = 0.8)
 plotEigengeneNetworks(consensusMEs, setLabels = c("WT - Female", "WT - Male", "CLAMS - Female", "CLAMS - Male", "RW - Female", "RW - Male"), 
                       plotDendrograms = FALSE, marHeatmap = c(3, 3, 2, 1), zlimPreservation = c(0.5, 1), 
                       xLabelsAngle = 90)
 dev.off()
-write.csv(consensusMEs$wtmdata$data, "ME_WTM.csv")
+
+consensusMEs <- consensusOrderMEs(consensusMods$multiMEs)
+pdf(file = "Consensus WGCNA Eigengene Networks Corrected_wt.pdf", width = 32, height = 32)
+sizeGrWindow(width = 32, height = 32)
+par(cex = 0.8)
+plotEigengeneNetworks(consensusMEs, setLabels = c("WT - Female", "WT - Male"), 
+                      plotDendrograms = FALSE, marHeatmap = c(3, 3, 2, 1), zlimPreservation = c(0.5, 1), 
+                      xLabelsAngle = 90)
+dev.off()
+
+consensusMEs <- consensusOrderMEs(consensusMods$multiMEs)
+pdf(file = "Consensus WGCNA Eigengene Networks WTmin30.pdf", width = 32, height = 32)
+sizeGrWindow(width = 32, height = 32)
+par(cex = 0.8)
+plotEigengeneNetworks(consensusMEs, setLabels = c("WT - Female", "WT - Male"), 
+                      plotDendrograms = FALSE, marHeatmap = c(3, 3, 2, 1), zlimPreservation = c(0.5, 1), 
+                      xLabelsAngle = 90)
+dev.off()
 # Calculate Module Membership ####
 moduleMembership <- mtd.mapply(bicorAndPvalue, multiExpr, consensusMEs, 
                                MoreArgs = list(alternative = "two.sided", use = "pairwise.complete.obs", 
@@ -286,13 +340,13 @@ MM_female <- as.data.frame(moduleMembership$wtfdata$data$bicor)
 colnames(MM_female) <- gsub(pattern = "ME", replacement = "", x = colnames(MM_female), fixed = TRUE)
 MM_female$Probe <- rownames(MM_female)
 MM_female$Module <- consensusMods$colors
-write.table(MM_female, "Consensus Modules FEMALES WT Module Membership.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(MM_female, "Consensus Modules FEMALES WT min30 Module Membership2.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 
 MM_male <- as.data.frame(moduleMembership$wtmdata$data$bicor)
 colnames(MM_male) <- gsub(pattern = "ME", replacement = "", x = colnames(MM_male), fixed = TRUE)
 MM_male$Probe <- rownames(MM_male)
 MM_male$Module <- consensusMods$colors
-write.table(MM_male, "Consensus Modules MALES WT Module Membership.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(MM_male, "Consensus Modules MALES WT min30 Module Membership2.txt", sep = "\t", quote = FALSE, row.names = FALSE)
 
 MM_cfemale <- as.data.frame(moduleMembership$cfdata$data$bicor)
 colnames(MM_cfemale) <- gsub(pattern = "ME", replacement = "", x = colnames(MM_cfemale), fixed = TRUE)
@@ -323,28 +377,75 @@ write.table(MM_rmale, "Consensus Modules MALES CLAMS Module Membership.txt", sep
 hubProbes_female <- sapply(colnames(MM_female)[!colnames(MM_female) %in% c("Probe", "Module")], function(x){
   temp <- MM_female[MM_female$Module == x,]
   temp$Probe[temp[, x] == max(temp[, x])] %>% as.character %>% unique %>% sort})
+hubProbes_wtfemale <- lapply(colnames(MM_female)[!colnames(MM_female) %in% c("Probe", "Module")], function(x){
+  temp <- MM_female[MM_female$Module == x,]
+  temp2 <- order(MM_female[MM_female$Module == x,]$x, decreasing = TRUE)
+  temp$Probe[temp2]})
+hubGenes_wtfemale <- lapply(hubProbes_wtfemale, function(x){x %>% unlist %>% as.character %>% unique %>% sort %>% paste(collapse = ", ")}) %>% unlist
+hubProbes_cfemale <- sapply(colnames(MM_cfemale)[!colnames(MM_cfemale) %in% c("Probe", "Module")], function(x){
+  temp <- MM_cfemale[MM_cfemale$Module == x,]
+  temp$Probe[temp[, x] == max(temp[, x])] %>% as.character %>% unique %>% sort})
+hubGenes_cfemale <- lapply(hubProbes_cfemale, function(x){x %>% unlist %>% as.character %>% unique %>% sort %>% paste(collapse = ", ")}) %>% unlist
+hubProbes_rfemale <- sapply(colnames(MM_rfemale)[!colnames(MM_rfemale) %in% c("Probe", "Module")], function(x){
+  temp <- MM_rfemale[MM_rfemale$Module == x,]
+  temp$Probe[temp[, x] == max(temp[, x])] %>% as.character %>% unique %>% sort})
+hubProbes_female2 <- sapply(colnames(MM_female)[!colnames(MM_female) %in% c("Probe", "Module")], function(x){
+  temp <- MM_female[MM_female$Module == x,]
+  temp$Probe[temp[, x] == head(temp[, x], 2)] %>% as.character %>% unique %>% sort})
 hubProbes_male <- sapply(colnames(MM_male)[!colnames(MM_male) %in% c("Probe", "Module")], function(x){
   temp <- MM_male[MM_male$Module == x,]
   temp$Probe[temp[, x] == max(temp[, x])] %>% as.character %>% unique %>% sort})
 ensembl <- useMart(biomart = "ensembl", dataset = "mmusculus_gene_ensembl")
-hubGenes_female <- lapply(hubProbes_female, function(x){
+hubGenes_female3 <- lapply(hubProbes_wtfemale, function(x){
   getBM(attributes = "external_gene_name", filters = "ensembl_gene_id", values = x, mart = ensembl, 
         verbose = TRUE) %>% unlist %>% as.character %>% unique %>% sort %>% paste(collapse = ", ")}) %>% unlist
-hubGenes_female
-write.csv(hubGenes_female, "hubGenes_CF_18.csv")
+hubGenes_female2 <- lapply(hubProbes_female2, function(x){
+  getBM(attributes = "external_gene_name", filters = "ensembl_gene_id", values = x, mart = ensembl, 
+        verbose = TRUE) %>% unlist %>% as.character %>% unique %>% sort %>% paste(collapse = ", ")}) %>% unlist
+hubGenes_female2 <- getBM(attributes = "external_gene_name", filters = "ensembl_gene_id", values = hubProbes_female2, mart = ensembl, 
+        verbose = TRUE) 
+hubGenes_female3
+write.csv(hubGenes_female, "hubGenes_female_min30.csv")
 hubGenes_male <- lapply(hubProbes_male, function(x){
   getBM(attributes = "external_gene_name", filters = "ensembl_gene_id", values = x, mart = ensembl, 
         verbose = TRUE) %>% unlist %>% as.character %>% unique %>% sort %>% paste(collapse = ", ")}) %>% unlist
 hubGenes_male
-write.csv(hubGenes_male, "hubGenes_CM_18.csv")
+write.csv(hubGenes_male, "hubGenes_male_min30.csv")
 
+###Get top 5 hub genes###
+hubProbes_wtfemale <- as.data.frame(sapply(colnames(MM_female)[!colnames(MM_female) %in% c("Probe", "Module")], function(x){
+  temp <- MM_female[MM_female$Module == x,]
+  temp$Probe[order(temp[, x], decreasing = TRUE)[1:5]]}))
+write.csv(hubProbes_wtfemale, "top5_hubGenes_wtfemale.csv")
+hubProbes_wtmale <- as.data.frame(sapply(colnames(MM_male)[!colnames(MM_male) %in% c("Probe", "Module")], function(x){
+  temp <- MM_male[MM_male$Module == x,]
+  temp$Probe[order(temp[, x], decreasing = TRUE)[1:5]]}))
+write.csv(hubProbes_wtmale, "top5_hubGenes_wtmale.csv")
+hubProbes_cfemale <- as.data.frame(sapply(colnames(MM_cfemale)[!colnames(MM_cfemale) %in% c("Probe", "Module")], function(x){
+  temp <- MM_cfemale[MM_cfemale$Module == x,]
+  temp$Probe[order(temp[, x], decreasing = TRUE)[1:5]]}))
+write.csv(hubProbes_cfemale, "top5_hubGenes_cfemale.csv")
+hubProbes_cmale <- as.data.frame(sapply(colnames(MM_cmale)[!colnames(MM_cmale) %in% c("Probe", "Module")], function(x){
+  temp <- MM_cmale[MM_cmale$Module == x,]
+  temp$Probe[order(temp[, x], decreasing = TRUE)[1:5]]}))
+write.csv(hubProbes_cmale, "top5_hubGenes_cmale.csv")
+hubProbes_rfemale <- as.data.frame(sapply(colnames(MM_rfemale)[!colnames(MM_rfemale) %in% c("Probe", "Module")], function(x){
+  temp <- MM_rfemale[MM_rfemale$Module == x,]
+  temp$Probe[order(temp[, x], decreasing = TRUE)[1:5]]}))
+write.csv(hubProbes_rfemale, "top5_hubGenes_rfemale.csv")
+hubProbes_rmale <- as.data.frame(sapply(colnames(MM_rmale)[!colnames(MM_rmale) %in% c("Probe", "Module")], function(x){
+  temp <- MM_rmale[MM_rmale$Module == x,]
+  temp$Probe[order(temp[, x], decreasing = TRUE)[1:5]]}))
+write.csv(hubProbes_rmale, "top5_hubGenes_rmale.csv")
 ### CLAMS-RW ###
 # Combine Covariates ####
 cov_wtf <- read.csv("wtf_traits.csv")
 cov_wtm <- read.csv("wtm_traits.csv")
-cov_cf <- read.csv("cf_traits.csv")
+cov_cf3 <- read.csv("cf_traits.csv")
+#cov_cf2 <- read.csv("cf_traits.csv")
+#cov_cf3 <- read.csv("cf_traits2.csv")
 cov_cm <- read.csv("cm_traits.csv")
-cov_rf <- read.csv("rf_traits.csv")
+cov_rf2 <- read.csv("rf_traits.csv")
 cov_rm <- read.csv("rm_traits.csv")
 #cov_female <- cov_female[,c("SampleID", "Timepoint", "Light")]
 #colnames(cov_female)[colnames(cov_female) == "SampleID"] <- "SampleID"
@@ -356,42 +457,61 @@ rownames(cov_wtf) <- cov_wtf$SampleID
 #cov_female <- cov_female[,c("Timepoint", "Light")]
 #cov_wtf <- as.matrix(cov_wtf)
 cov_wtf <- cov_wtf[,-c(1)]
-rownames(consensusMEs$wtfdata$data) = rownames(cov_wtf)
+#rownames(consensusMEs$wtfdata$data) = rownames(cov_wtf)
 table(rownames(consensusMEs$wtfdata$data) == rownames(cov_wtf)) # All TRUE
 
 rownames(cov_wtm) <- cov_wtm$SampleID
 #cov_male <- cov_male[,c("Timepoint", "Light")]
 #cov_wtm <- as.matrix(cov_wtm)
 cov_wtm <- cov_wtm[,-c(1)]
-rownames(consensusMEs$wtmdata$data) = rownames(cov_wtm)
+#rownames(consensusMEs$wtmdata$data) = rownames(cov_wtm)
 table(rownames(consensusMEs$wtmdata$data) == rownames(cov_wtm)) # All TRUE
+
+rownames(cov_cf2) <- cov_cf2$SampleID
+#cov_female <- cov_female[,c("Timepoint", "Light")]
+#cov_cf <- as.matrix(cov_cf)
+cov_cf2 <- cov_cf2[,-c(1,2,3,5,6,7,8,9,16)]
+#rownames(consensusMEs$cfdata$data) = rownames(cov_cf)
+#rownames(consensusMEs$cfdata$data) = rownames(cov_cf2)
+#rownames(cov_cf3) = rownames(cov_cf2)
+cov_cf2 <- cov_cf2[rownames(consensusMEs$cfdata$data),]
+table(rownames(cov_cf3) == rownames(cov_cf2))
+table(rownames(consensusMEs$cfdata$data) == rownames(cov_cf2)) # All TRUE
+
+table(rownames(cov_cf) == rownames(cov_cf2)) # All TRUE
 
 rownames(cov_cf) <- cov_cf$SampleID
 #cov_female <- cov_female[,c("Timepoint", "Light")]
 #cov_cf <- as.matrix(cov_cf)
 cov_cf <- cov_cf[,-c(1,2,3,5,6,7,8,9,16)]
-rownames(consensusMEs$cfdata$data) = rownames(cov_cf)
+#rownames(consensusMEs$cfdata$data) = rownames(cov_cf)
+#rownames(consensusMEs$cfdata$data) = rownames(cov_cf2)
+#rownames(cov_cf3) = rownames(cov_cf2)
+#table(rownames(cov_cf3) == rownames(cov_cf2))
 table(rownames(consensusMEs$cfdata$data) == rownames(cov_cf)) # All TRUE
+#table(rownames(cov_cf) == rownames(cov_cf2)) # All TRUE
 
 rownames(cov_cm) <- cov_cm$SampleID
 #cov_male <- cov_male[,c("Timepoint", "Light")]
 #cov_cm <- as.matrix(cov_cm)
 cov_cm <- cov_cm[,-c(1,2,3,5,6,7,8,9,16)]
-rownames(consensusMEs$cmdata$data) = rownames(cov_cm)
+#rownames(consensusMEs$cmdata$data) = rownames(cov_cm)
+cov_cm <- cov_cm[rownames(consensusMEs$cmdata$data),]
 table(rownames(consensusMEs$cmdata$data) == rownames(cov_cm)) # All TRUE
 
 rownames(cov_rf) <- cov_rf$ID
 #cov_female <- cov_female[,c("Timepoint", "Light")]
 #cov_rf <- as.matrix(cov_rf)
 cov_rf <- cov_rf[,-c(1,2,4,5,6,7,8)]
-rownames(consensusMEs$rfdata$data) = rownames(cov_rf)
+#rownames(consensusMEs$rfdata$data) = rownames(cov_rf)
 table(rownames(consensusMEs$rfdata$data) == rownames(cov_rf)) # All TRUE
 
 rownames(cov_rm) <- cov_rm$SampleID
 #cov_male <- cov_male[,c("Timepoint", "Light")]
 #cov_cm <- as.matrix(cov_cm)
 cov_rm <- cov_rm[,-c(1,2,4,5,6,7,8)]
-rownames(consensusMEs$rmdata$data) = rownames(cov_rm)
+#rownames(consensusMEs$rmdata$data) = rownames(cov_rm)
+cov_rm <- cov_rm[rownames(consensusMEs$rmdata$data),]
 table(rownames(consensusMEs$rmdata$data) == rownames(cov_rm)) # All TRUE
 
 pheno <- list(wtf = list(data = cov_wtf),
@@ -400,6 +520,26 @@ pheno <- list(wtf = list(data = cov_wtf),
               cm = list(data = cov_cm),
               rf = list(data = cov_rf),
               rm = list(data = cov_rm))
+
+pheno2 <- list(wtf = list(data = cov_wtf),
+              wtm = list(data = cov_wtm),
+              cf = list(data = cov_cf2),
+              cm = list(data = cov_cm),
+              rf = list(data = cov_rf),
+              rm = list(data = cov_rm))
+
+pheno3 <- list(wtf = list(data = cov_wtf),
+               wtm = list(data = cov_wtm),
+               cf = list(data = cov_cf3),
+               cm = list(data = cov_cm),
+               rf = list(data = cov_rf),
+               rm = list(data = cov_rm))
+
+pheno <- list(wtf = list(data = cov_wtf),
+              wtm = list(data = cov_wtm),
+              cf = list(data = cov_cf),
+              cm = list(data = cov_cm),
+              rf = list(data = cov_rf))
 
 ### Module Trait Correlation
 
